@@ -7,7 +7,6 @@
     <!-- Tailwind CSS (using CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      // Optionally, configure Tailwind with your custom colors and fonts.
       tailwind.config = {
         theme: {
           extend: {
@@ -52,6 +51,7 @@
               Lookup Stock
             </button>
           </div>
+
           <!-- Stats Grid -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div
@@ -69,16 +69,16 @@
             <div
               class="bg-capital-one-dark-blue/50 p-6 rounded-xl border border-capital-one-light-gray/20 hover:bg-capital-one-dark-blue/70 transition-colors backdrop-blur-sm"
             >
-              <h3 class="text-capital-one-light-gray text-lg mb-2">Historical Volitility</h3>
+              <h3 class="text-capital-one-light-gray text-lg mb-2">Historical Volatility</h3>
               <div id="volitility" class="text-2xl font-bold">--</div>
             </div>
           </div>
 
-          <!-- New Two-Column Layout -->
+          <!-- Two-Column Layout -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
             <!-- Left Column -->
             <div class="space-y-4">
-                <h3>Enter Strike Price:</h3>
+              <h3>Enter Strike Price:</h3>
               <input
                 type="number"
                 id="strike-price"
@@ -97,10 +97,45 @@
               
               <button 
                 id="submitButton"
-                class="w-full p-4 bg-capital-one-red rounded-lg hover:bg-red-600 transition-colors"
+                class="w-full p-4 bg-green-500 rounded-lg hover:bg-green-600 transition-colors"
               >
                 Start Simulation
               </button>
+
+              <!-- Buy/Sell Buttons -->
+              <div class="flex w-full gap-2">
+                <button class="w-1/2 p-4 bg-green-500 rounded-lg hover:bg-green-600 transition-colors" id="buyButton">
+                  Buy
+                </button>
+                <button class="w-1/2 p-4 bg-capital-one-red rounded-lg hover:bg-red-600 transition-colors" id="sellButton">
+                  Sell
+                </button>
+              </div>
+
+              <div class="space-y-4">
+                <h3>Holdings: </h3>
+                <!-- Portfolio Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse border border-capital-one-light-gray">
+                        <thead>
+                            <tr class="bg-capital-one-dark-blue/70 text-capital-one-light-gray">
+                                <th class="border border-capital-one-light-gray px-4 py-2">Stock</th>
+                                <th class="border border-capital-one-light-gray px-4 py-2">Shares</th>
+                                <th class="border border-capital-one-light-gray px-4 py-2">Price</th>
+                            </tr>
+                        </thead>
+                        <tbody id="portfolio-body">
+                          {% for stock in stocks %}
+                            <tr class="bg-capital-one-dark-blue/70 text-capital-one-light-gray">
+                              <td class="border border-capital-one-light-gray px-4 py-2">{{ stock.name }}</td>
+                              <td class="border border-capital-one-light-gray px-4 py-2">{{ stock.shares }}</td>
+                              <td class="border border-capital-one-light-gray px-4 py-2">{{ stock.price }}</td>
+                            </tr>
+                          {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+              </div>  
             </div>
 
             <!-- Right Column -->
@@ -130,15 +165,28 @@
       </div>
     </main>
 
+    <!-- Hidden Forms for Buy/Sell (submitted by JavaScript) -->
+    <form id="buyForm" method="POST" action="/buy" style="display:none;">
+      <input type="text" id="buySymbol" name="symbol" />
+      <input type="text" id="buyPrice" name="price" />
+      <input type="number" id="buyShares" name="shares" />
+    </form>
+
+    <form id="sellForm" method="POST" action="/sell" style="display:none;">
+      <input type="text" id="sellSymbol" name="symbol" />
+      <input type="text" id="sellPrice" name="price" />
+      <input type="number" id="sellShares" name="shares" />
+    </form>
+
     <script>
       // Connect to the Socket.IO server.
       const socket = io();
- 
-      // Get references to the DOM elements.
+
+      // ====================== SEARCH EVENT =====================
       const searchInput = document.getElementById("searchInput");
       const enterButton = document.getElementById("enterButton");
 
-      // When the "Enter" button is clicked...
+      // When the "Lookup Stock" button is clicked:
       enterButton.addEventListener("click", () => {
         const searchText = searchInput.value;
         if (searchText.trim() !== "") {
@@ -147,28 +195,80 @@
         }
       });
 
-      // Optionally, listen for responses from the backend.
+      // Listen for responses from the backend after search
       socket.on("search_response", (data) => {
         console.log("Search response received:", data);  // data is the result object directly
-        if(data.status != "success") {
-            alert("invalid ticker"); //TODO implement onscreen text
+        if (data.status !== "success") {
+            alert("Invalid ticker"); 
         } else {
-            document.getElementById("stock-price").textContent = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data.latest_price);
+            document.getElementById("stock-price").textContent = 
+               new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
+               .format(data.latest_price);
+
             document.getElementById("stock-volume").textContent = data.latest_volume.toFixed(2);
-            document.getElementById("volitility").textContent = new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 2 }).format(data.historical_volatility);
-            
+
+            document.getElementById("volitility").textContent = 
+               new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 2 })
+               .format(data.historical_volatility);
         }
       });
 
-      // Optionally, listen for responses from the backend.
-      socket.on("backend_simulaton_event", (data) => {
-        console.log("simulation response received:", data);  // data is the result object directly
-        if(data.status != "success") {
-            alert("something went wrong in the simulation"); //TODO implement onscreen text
+      // ====================== SIMULATION EVENT =====================
+      const submitButton = document.getElementById("submitButton");
+      submitButton.addEventListener("click", () => {
+        // Example: you can send any data you want to the backend
+        socket.emit("backend_simulaton_event", {
+          strike: document.getElementById("strike-price").value,
+          maturity: document.getElementById("maturity-time").value
+        });
+      });
+
+      socket.on("backend_simulation_event", (data) => {
+        console.log("simulation response received:", data);
+        if (data.status !== "success") {
+            alert("Something went wrong in the simulation");
         } else {
-            //TODO, update with backend stuff
-            
-            document.getElementById('jsonDisplay').textContent = JSON.stringify(data.detailed_output, null, 2);
+            document.getElementById('jsonDisplay').textContent = 
+                JSON.stringify(data.detailed_output, null, 2);
+        }
+      });
+
+      // ====================== BUY/SELL LOGIC =====================
+      const buyButton = document.getElementById("buyButton");
+      const sellButton = document.getElementById("sellButton");
+
+      buyButton.addEventListener("click", (e) => {
+        e.preventDefault(); // Prevent default link behavior if any
+        // 1. Get symbol from #searchInput
+        const symbol = document.getElementById("searchInput").value.trim();
+        // 2. Get price from #stock-price (remove $ and commas)
+        const priceText = document.getElementById("stock-price").textContent;
+        const price = priceText.replace(/[^0-9.-]+/g, ""); // strip out $ and commas
+        // 3. Prompt user for # of shares (or fetch from a dedicated input)
+        const shares = prompt("Enter number of shares to BUY:", 1);
+
+        if (symbol && price && shares) {
+          document.getElementById("buySymbol").value = symbol;
+          document.getElementById("buyPrice").value = price;
+          document.getElementById("buyShares").value = shares;
+          // Submit hidden buy form
+          document.getElementById("buyForm").submit();
+        }
+      });
+
+      sellButton.addEventListener("click", (e) => {
+        e.preventDefault();
+        const symbol = document.getElementById("searchInput").value.trim();
+        const priceText = document.getElementById("stock-price").textContent;
+        const price = priceText.replace(/[^0-9.-]+/g, "");
+        const shares = prompt("Enter number of shares to SELL:", 1);
+
+        if (symbol && price && shares) {
+          document.getElementById("sellSymbol").value = symbol;
+          document.getElementById("sellPrice").value = price;
+          document.getElementById("sellShares").value = shares;
+          // Submit hidden sell form
+          document.getElementById("sellForm").submit();
         }
       });
     </script>

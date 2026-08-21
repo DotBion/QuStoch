@@ -50,8 +50,9 @@ Instead of iterating through all possible stock price movements like classical M
 - **Efficient Quantum Simulation**  
   Designed a practical quantum algorithm to map probability amplitudes effectively.
 
-- **Quantum Noise & Decoherence**  
-  Integrated error mitigation strategies to enhance result fidelity.
+- **Validating the Quantum Result**  
+  Runs on a noiseless state-vector simulator, and checks the amplitude-estimation output
+  against the classical expectation over the same discretised distribution.
 
 - **Hybrid Integration**  
   Combined quantum output with classical analytics for actionable insights.
@@ -63,7 +64,7 @@ Instead of iterating through all possible stock price movements like classical M
 - Built a working **quantum-classical hybrid prototype** for financial modeling.
 - Demonstrated **parallelized stochastic simulations** using quantum circuits.
 - Developed a real-time, interactive web interface.
-- Optimized the solution for **current NISQ (Noisy Intermediate-Scale Quantum)** devices.
+- Validated the simulation against closed-form **Black-Scholes** prices and Greeks.
 
 ---
 
@@ -78,7 +79,8 @@ Instead of iterating through all possible stock price movements like classical M
 ## Future Plans
 
 - **Enhanced Quantum Algorithms**  
-  Implement quantum error correction and improved state encoding.
+  Add noise models and error mitigation, and improve the state-preparation encoding so the
+  circuit can target real NISQ hardware rather than a simulator.
 
 - **Alternative Simulation Models**  
   Explore **quantum walks** and other novel models for financial forecasting.
@@ -95,3 +97,32 @@ Interested in experimenting with quantum-enhanced market simulations?
 ```bash
 git clone https://github.com/your-repo/qustoch.git
 cd qustoch
+
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+
+python src/app.py
+```
+
+Then open <http://127.0.0.1:5000>, look up a ticker, enter a strike price and a maturity
+in weeks, and run the simulation.
+
+Environment variables: `HOST`, `PORT`, and `FLASK_DEBUG=1` to enable the Flask debugger
+(leave it off unless you are developing locally).
+
+To run the simulation on its own, without the web server:
+
+```bash
+python src/quantumMonteCarloStochastic.py
+```
+
+### Tests
+
+```bash
+pip install -r requirements.txt
+pytest
+```
+
+The suite checks the simulation against closed-form Black-Scholes values and asserts that
+the quantum amplitude estimate agrees with the classical expectation over the same
+discretised distribution.

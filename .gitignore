@@ -169,3 +169,6 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Simulation charts generated at runtime (the checked-in samples stay tracked).
+src/static/images/graphs/QMC_*.svg

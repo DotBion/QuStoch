@@ -149,11 +149,11 @@
         }
       });
 
-      submitButton.addEventListener("click", () => {
+      submitButtonInput.addEventListener("click", () => {
         const stockTicker = searchInput.value;
         if(maturityTimeInput.value.trim() !== "") {
             if(strikePriceInput.value.trim() !== "") {
-                socket.emit("backend_simulaton_event", {
+                socket.emit("backend_simulation_event", {
                     striking_price: strikePriceInput.value,
                     maturity_time: maturityTimeInput.value,
                     stock_ticker: stockTicker
@@ -170,10 +170,10 @@
       socket.on("search_response", (data) => {
         console.log("Search response received:", data);  // data is the result object directly
         if(data.status != "success") {
-            alert("invalid ticker"); //TODO implement onscreen text
+            alert(data.message || "Invalid ticker, try again.");
         } else {
             document.getElementById("stock-price").textContent = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data.latest_price);
-            document.getElementById("stock-volume").textContent = data.latest_volume.toFixed(2);
+            document.getElementById("stock-volume").textContent = new Intl.NumberFormat('en-US').format(Math.round(data.latest_volume));
             document.getElementById("volatility").textContent = new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 2 }).format(data.historical_volatility);
             
         }
@@ -184,7 +184,7 @@
         console.log("simulation response received:", data);  // data is the result object directly
         
         if(data.status != "success") {
-            alert("something went wrong in the simulation"); //TODO implement onscreen text
+            alert(data.message || "Something went wrong in the simulation.");
         } else {
             // Assuming `data.image_name` contains the image file name
             var imageUrl = "{{url_for('static', filename='images/graphs/')}}" + data.graph_path;

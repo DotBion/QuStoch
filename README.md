@@ -95,8 +95,8 @@ Instead of iterating through all possible stock price movements like classical M
 Interested in experimenting with quantum-enhanced market simulations?
 
 ```bash
-git clone https://github.com/DotBion/QuStoch.git
-cd QuStoch
+git clone https://github.com/your-repo/qustoch.git
+cd qustoch
 
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
